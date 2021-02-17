@@ -1,11 +1,3 @@
-/**
- * Copyright (c) Tiny Technologies, Inc. All rights reserved.
- * Licensed under the LGPL or a commercial license.
- * For LGPL see License.txt in the project root for license information.
- * For commercial licenses see https://www.tiny.cloud/
- *
- * Version: 5.0.1 (2019-02-21)
- */
 (function () {
 var visualchars = (function (domGlobals) {
     'use strict';
@@ -43,36 +35,8 @@ var visualchars = (function (domGlobals) {
     };
     var Events = { fireVisualChars: fireVisualChars };
 
-    var charMap = {
-      '\xA0': 'nbsp',
-      '\xAD': 'shy'
+    var noop = function () {
     };
-    var charMapToRegExp = function (charMap, global) {
-      var key, regExp = '';
-      for (key in charMap) {
-        regExp += key;
-      }
-      return new RegExp('[' + regExp + ']', global ? 'g' : '');
-    };
-    var charMapToSelector = function (charMap) {
-      var key, selector = '';
-      for (key in charMap) {
-        if (selector) {
-          selector += ',';
-        }
-        selector += 'span.mce-' + charMap[key];
-      }
-      return selector;
-    };
-    var Data = {
-      charMap: charMap,
-      regExp: charMapToRegExp(charMap),
-      regExpGlobal: charMapToRegExp(charMap, true),
-      selector: charMapToSelector(charMap),
-      charMapToRegExp: charMapToRegExp,
-      charMapToSelector: charMapToSelector
-    };
-
     var constant = function (value) {
       return function () {
         return value;
@@ -81,8 +45,6 @@ var visualchars = (function (domGlobals) {
     var never = constant(false);
     var always = constant(true);
 
-    var never$1 = never;
-    var always$1 = always;
     var none = function () {
       return NONE;
     };
@@ -96,37 +58,27 @@ var visualchars = (function (domGlobals) {
       var id = function (n) {
         return n;
       };
-      var noop = function () {
-      };
-      var nul = function () {
-        return null;
-      };
-      var undef = function () {
-        return undefined;
-      };
       var me = {
         fold: function (n, s) {
           return n();
         },
-        is: never$1,
-        isSome: never$1,
-        isNone: always$1,
+        is: never,
+        isSome: never,
+        isNone: always,
         getOr: id,
         getOrThunk: call,
         getOrDie: function (msg) {
           throw new Error(msg || 'error: getOrDie called on none.');
         },
-        getOrNull: nul,
-        getOrUndefined: undef,
+        getOrNull: constant(null),
+        getOrUndefined: constant(undefined),
         or: id,
         orThunk: call,
         map: none,
-        ap: none,
         each: noop,
         bind: none,
-        flatten: none,
-        exists: never$1,
-        forall: always$1,
+        exists: never,
+        forall: always,
         filter: none,
         equals: eq,
         equals_: eq,
@@ -135,19 +87,15 @@ var visualchars = (function (domGlobals) {
         },
         toString: constant('none()')
       };
-      if (Object.freeze)
+      if (Object.freeze) {
         Object.freeze(me);
+      }
       return me;
     }();
     var some = function (a) {
-      var constant_a = function () {
-        return a;
-      };
+      var constant_a = constant(a);
       var self = function () {
         return me;
-      };
-      var map = function (f) {
-        return some(f(a));
       };
       var bind = function (f) {
         return f(a);
@@ -159,8 +107,8 @@ var visualchars = (function (domGlobals) {
         is: function (v) {
           return a === v;
         },
-        isSome: always$1,
-        isNone: never$1,
+        isSome: always,
+        isNone: never,
         getOr: constant_a,
         getOrThunk: constant_a,
         getOrDie: constant_a,
@@ -168,35 +116,31 @@ var visualchars = (function (domGlobals) {
         getOrUndefined: constant_a,
         or: self,
         orThunk: self,
-        map: map,
-        ap: function (optfab) {
-          return optfab.fold(none, function (fab) {
-            return some(fab(a));
-          });
+        map: function (f) {
+          return some(f(a));
         },
         each: function (f) {
           f(a);
         },
         bind: bind,
-        flatten: constant_a,
         exists: bind,
         forall: bind,
         filter: function (f) {
           return f(a) ? me : NONE;
-        },
-        equals: function (o) {
-          return o.is(a);
-        },
-        equals_: function (o, elementEq) {
-          return o.fold(never$1, function (b) {
-            return elementEq(a, b);
-          });
         },
         toArray: function () {
           return [a];
         },
         toString: function () {
           return 'some(' + a + ')';
+        },
+        equals: function (o) {
+          return o.is(a);
+        },
+        equals_: function (o, elementEq) {
+          return o.fold(never, function (b) {
+            return elementEq(a, b);
+          });
         }
       };
       return me;
@@ -211,13 +155,16 @@ var visualchars = (function (domGlobals) {
     };
 
     var typeOf = function (x) {
-      if (x === null)
+      if (x === null) {
         return 'null';
+      }
       var t = typeof x;
-      if (t === 'object' && Array.prototype.isPrototypeOf(x))
+      if (t === 'object' && (Array.prototype.isPrototypeOf(x) || x.constructor && x.constructor.name === 'Array')) {
         return 'array';
-      if (t === 'object' && String.prototype.isPrototypeOf(x))
+      }
+      if (t === 'object' && (String.prototype.isPrototypeOf(x) || x.constructor && x.constructor.name === 'String')) {
         return 'string';
+      }
       return t;
     };
     var isType = function (type) {
@@ -227,24 +174,24 @@ var visualchars = (function (domGlobals) {
     };
     var isFunction = isType('function');
 
+    var nativeSlice = Array.prototype.slice;
     var map = function (xs, f) {
       var len = xs.length;
       var r = new Array(len);
       for (var i = 0; i < len; i++) {
         var x = xs[i];
-        r[i] = f(x, i, xs);
+        r[i] = f(x, i);
       }
       return r;
     };
     var each = function (xs, f) {
       for (var i = 0, len = xs.length; i < len; i++) {
         var x = xs[i];
-        f(x, i, xs);
+        f(x, i);
       }
     };
-    var slice = Array.prototype.slice;
     var from$1 = isFunction(Array.from) ? Array.from : function (x) {
-      return slice.call(x);
+      return nativeSlice.call(x);
     };
 
     var fromHtml = function (html, scope) {
@@ -298,6 +245,8 @@ var visualchars = (function (domGlobals) {
     var ENTITY = domGlobals.Node.ENTITY_NODE;
     var NOTATION = domGlobals.Node.NOTATION_NODE;
 
+    var Global = typeof domGlobals.window !== 'undefined' ? domGlobals.window : Function('return this;')();
+
     var type = function (element) {
       return element.dom().nodeType;
     };
@@ -311,13 +260,44 @@ var visualchars = (function (domGlobals) {
     };
     var isText = isType$1(TEXT);
 
+    var charMap = {
+      '\xA0': 'nbsp',
+      '\xAD': 'shy'
+    };
+    var charMapToRegExp = function (charMap, global) {
+      var key, regExp = '';
+      for (key in charMap) {
+        regExp += key;
+      }
+      return new RegExp('[' + regExp + ']', global ? 'g' : '');
+    };
+    var charMapToSelector = function (charMap) {
+      var key, selector = '';
+      for (key in charMap) {
+        if (selector) {
+          selector += ',';
+        }
+        selector += 'span.mce-' + charMap[key];
+      }
+      return selector;
+    };
+    var Data = {
+      charMap: charMap,
+      regExp: charMapToRegExp(charMap),
+      regExpGlobal: charMapToRegExp(charMap, true),
+      selector: charMapToSelector(charMap),
+      charMapToRegExp: charMapToRegExp,
+      charMapToSelector: charMapToSelector
+    };
+
     var wrapCharWithSpan = function (value) {
       return '<span data-mce-bogus="1" class="mce-' + Data.charMap[value] + '">' + value + '</span>';
     };
     var Html = { wrapCharWithSpan: wrapCharWithSpan };
 
     var isMatch = function (n) {
-      return isText(n) && value(n) !== undefined && Data.regExp.test(value(n));
+      var value$1 = value(n);
+      return isText(n) && value$1 !== undefined && Data.regExp.test(value$1);
     };
     var filterDescendants = function (scope, predicate) {
       var result = [];
@@ -339,8 +319,8 @@ var visualchars = (function (domGlobals) {
         elm = elm.parentNode;
       }
     };
-    var replaceWithSpans = function (html) {
-      return html.replace(Data.regExpGlobal, Html.wrapCharWithSpan);
+    var replaceWithSpans = function (text) {
+      return text.replace(Data.regExpGlobal, Html.wrapCharWithSpan);
     };
     var Nodes = {
       isMatch: isMatch,
@@ -353,7 +333,7 @@ var visualchars = (function (domGlobals) {
       var node, div;
       var nodeList = Nodes.filterDescendants(Element.fromDom(rootElm), Nodes.isMatch);
       each(nodeList, function (n) {
-        var withSpans = Nodes.replaceWithSpans(value(n));
+        var withSpans = Nodes.replaceWithSpans(editor.dom.encode(value(n)));
         div = editor.dom.create('div', null, withSpans);
         while (node = div.lastChild) {
           editor.dom.insertAfter(node, n.dom());
@@ -435,40 +415,35 @@ var visualchars = (function (domGlobals) {
     };
     var Bindings = { setup: setup$1 };
 
-    var toggleActiveState = function (editor, enabledStated) {
-      return function (api) {
-        api.setActive(enabledStated.get());
-        var editorEventCallback = function (e) {
-          return api.setActive(e.state);
-        };
-        editor.on('VisualChars', editorEventCallback);
-        return function () {
-          return editor.off('VisualChars', editorEventCallback);
-        };
+    var toggleActiveState = function (editor) {
+      return function (e) {
+        var ctrl = e.control;
+        editor.on('VisualChars', function (e) {
+          ctrl.active(e.state);
+        });
       };
     };
-    var register$1 = function (editor, toggleState) {
-      editor.ui.registry.addToggleButton('visualchars', {
-        tooltip: 'Show invisible characters',
-        icon: 'paragraph',
-        onAction: function () {
-          return editor.execCommand('mceVisualChars');
-        },
-        onSetup: toggleActiveState(editor, toggleState)
+    var register$1 = function (editor) {
+      editor.addButton('visualchars', {
+        active: false,
+        title: 'Show invisible characters',
+        cmd: 'mceVisualChars',
+        onPostRender: toggleActiveState(editor)
       });
-      editor.ui.registry.addToggleMenuItem('visualchars', {
+      editor.addMenuItem('visualchars', {
         text: 'Show invisible characters',
-        onAction: function () {
-          return editor.execCommand('mceVisualChars');
-        },
-        onSetup: toggleActiveState(editor, toggleState)
+        cmd: 'mceVisualChars',
+        onPostRender: toggleActiveState(editor),
+        selectable: true,
+        context: 'view',
+        prependToContext: true
       });
     };
 
     global.add('visualchars', function (editor) {
       var toggleState = Cell(false);
       Commands.register(editor, toggleState);
-      register$1(editor, toggleState);
+      register$1(editor);
       Keyboard.setup(editor, toggleState);
       Bindings.setup(editor, toggleState);
       return Api.get(toggleState);

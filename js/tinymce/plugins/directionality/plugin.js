@@ -1,11 +1,3 @@
-/**
- * Copyright (c) Tiny Technologies, Inc. All rights reserved.
- * Licensed under the LGPL or a commercial license.
- * For LGPL see License.txt in the project root for license information.
- * For commercial licenses see https://www.tiny.cloud/
- *
- * Version: 5.0.1 (2019-02-21)
- */
 (function () {
 var directionality = (function () {
     'use strict';
@@ -48,25 +40,15 @@ var directionality = (function () {
       return selector.join(',');
     };
     var register$1 = function (editor) {
-      editor.ui.registry.addToggleButton('ltr', {
-        tooltip: 'Left to right',
-        icon: 'ltr',
-        onAction: function () {
-          return editor.execCommand('mceDirectionLTR');
-        },
-        onSetup: function (buttonApi) {
-          return editor.selection.selectorChangedWithUnbind(generateSelector('ltr'), buttonApi.setActive).unbind;
-        }
+      editor.addButton('ltr', {
+        title: 'Left to right',
+        cmd: 'mceDirectionLTR',
+        stateSelector: generateSelector('ltr')
       });
-      editor.ui.registry.addToggleButton('rtl', {
-        tooltip: 'Right to left',
-        icon: 'rtl',
-        onAction: function () {
-          return editor.execCommand('mceDirectionRTL');
-        },
-        onSetup: function (buttonApi) {
-          return editor.selection.selectorChangedWithUnbind(generateSelector('rtl'), buttonApi.setActive).unbind;
-        }
+      editor.addButton('rtl', {
+        title: 'Right to left',
+        cmd: 'mceDirectionRTL',
+        stateSelector: generateSelector('rtl')
       });
     };
     var Buttons = { register: register$1 };
